@@ -1,0 +1,9 @@
+# Ignore local business data folders
+local_files/
+n8n_data/
+submit/
+archive/
+
+# Ignore system/OS junk files
+.DS_Store
+Thumbs.db

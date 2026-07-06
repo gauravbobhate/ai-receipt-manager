@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    container_name: n8n
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_BLOCK_NODES=""
+      - NODES_EXCLUDE="[]"
+      - N8N_FORCIBLY_ENABLE_SANDBOX_NODES=true
+      - N8N_DEFAULT_BINARY_DATA_MODE=filesystem
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+    volumes:
+      - ./n8n_data:/home/node/.n8n
+      - ./local_files:/home/node/.n8n-files
+    restart: unless-stopped

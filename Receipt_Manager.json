@@ -1,0 +1,307 @@
+{
+  "name": "Receipt_Manager",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {
+          "reset": false
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -144,
+        -80
+      ],
+      "id": "db339a2e-5399-46f1-9732-8987837c5779",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a forensic financial accountant. Analyze the provided receipt image. \nExtract all items and return a JSON array. Do NOT include markdown formatting. Convert German Umlaut characters and other accented characters to their english versions. so \"ö\" becomes \"oe\" and etc.\n\nKeys for each object:\n- \"Shop Name\": Merchant name.\n- \"Receipt number\": The ID (or \"N/A\").\n- \"Item Name\": Description.\n- \"Quantity\": Integer.\n- \"Item Category\": [Groceries, Food - dining, Beverages, home decor, home maintenance, entertainment, Apparels, Work / Office, Transport, Travel, Personal / Health care, Gym / fitness, Gifts].\n- \"Date\": YYYY-MM-DD.\n- \"Cost\": Number (no currency symbol).\n- \"Currency\": e.g., EUR.\n- \"Purchase type\": [Essential: Fixed, Essential: Variable, Discretionary: Basic, Impulse, Splurge, Fancy].\n- \"AI Confidence score\": 0.0 to 1.0.\n- \"Photo Name\": {{ $node[\"Loop Over Items\"].json[\"name\"] }}",
+        "options": {
+          "passthroughBinaryImages": true
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        256,
+        -16
+      ],
+      "id": "f6cc26b0-442c-428c-9985-6dd2c0d5d37a",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        176,
+        320
+      ],
+      "id": "ac9f0327-81f9-4468-a636-ecea442ee3f7",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "2SOlBwOMVbKGGmGz",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "/home/node/.n8n-files/output/finances_master.csv",
+        "options": {
+          "append": true
+        }
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        1152,
+        64
+      ],
+      "id": "1428be9a-5dd0-4025-863c-92ddd273638e",
+      "name": "Write to csv file"
+    },
+    {
+      "parameters": {
+        "fileSelector": "=/home/node/.n8n-files/input/{{ $json.name }}",
+        "options": {
+          "dataPropertyName": "data"
+        }
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        64,
+        -16
+      ],
+      "id": "8843cf18-36bc-4977-b901-2c4dc02c073b",
+      "name": "Read receipts"
+    },
+    {
+      "parameters": {
+        "command": "=mv \"/home/node/.n8n-files/input/{{ $('Loop Over Items').item.json.name }}\" \"/home/node/.n8n-files/processed/\""
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        1296,
+        64
+      ],
+      "id": "1dc1dc1c-1fca-4a43-a68d-480db4ffe088",
+      "name": "Execute Command"
+    },
+    {
+      "parameters": {
+        "options": {
+          "headerRow": false
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        64
+      ],
+      "id": "e80d0fb1-def1-4735-af67-084d0add20c5",
+      "name": "Convert to File"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -800,
+        -64
+      ],
+      "id": "a2612034-c526-431a-8030-7761bb30980c",
+      "name": "Start"
+    },
+    {
+      "parameters": {
+        "command": "ls /home/node/.n8n-files/input/"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        -608,
+        -64
+      ],
+      "id": "2fc6baba-ae2c-4e4c-b53b-ff9cd663df4c",
+      "name": "Capture all files"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Grab the raw text list of files from the shell execution\nconst rawOutput = $input.first().json.stdout;\n\n// 2. Split by newlines and filter out any accidental empty lines\nconst filesArray = rawOutput.split('\\n').map(name => name.trim()).filter(name => name.length > 0);\n\n// 3. Map into an n8n array format so each file is its own item\nreturn filesArray.map(filename => {\n  return {\n    json: { name: filename }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -368,
+        -64
+      ],
+      "id": "49126d5d-6894-4bf4-8a18-04461711cdec",
+      "name": "Prep file names"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Grab the first item from the AI Agent's results\nconst inputItem = $('AI Agent').first();\n\n// 2. Extract the 'output' string\nconst rawText = inputItem.json.output;\n\n// 3. Clean up any rogue formatting wrappers (like ```json)\nconst cleanText = rawText.replace(/```json|```/g, \"\").trim();\n\n// 4. Parse the string into a real JavaScript array\nconst itemsArray = JSON.parse(cleanText);\n\n// 5. Map the array into standard n8n format so each item gets its own row\nreturn itemsArray.map(item => {\n  return {\n    json: item\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        64
+      ],
+      "id": "5644fd49-896b-4f0f-8808-a708a637f0de",
+      "name": "Format Data"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Read receipts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Format Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read receipts": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write to csv file": {
+      "main": [
+        [
+          {
+            "node": "Execute Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Command": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File": {
+      "main": [
+        [
+          {
+            "node": "Write to csv file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Capture all files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Capture all files": {
+      "main": [
+        [
+          {
+            "node": "Prep file names",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prep file names": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Data": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "32a7ccb3-41e1-4cfb-9a97-67dd6989cf09",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e17dc3db71093dc34d2d497378868a58f00bcc3eff2d3ad2edc5d68a2c2f72d6"
+  },
+  "id": "cAlHgTDb9UmdbPLq",
+  "tags": []
+}
