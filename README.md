@@ -8,7 +8,8 @@ An automated, self-hosted n8n workflow designed to ingest local receipt images, 
 * **Verifiability**: The workflow features built-in AI Confidence Scoring, allowing automated validation checkmarks before data persistence takes place.
 
 ## 🖼️ Workflow Architecture
-![n8n Workflow Blueprint](images/workflow.png)
+<img width="2129" height="557" alt="image" src="https://github.com/user-attachments/assets/b31b3711-3542-4b8b-989e-71c0a6e3ffed" />
+
 
 ### Core Node Sequence:
 1. **Manual Trigger**: Initiates batch-processing cycles on demand.
