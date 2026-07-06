@@ -1,4 +1,4 @@
-# AKI-Ex Project: AI-Powered Finance Manager (n8n)
+# AI-Powered Finance Manager (n8n)
 
 An automated, self-hosted n8n workflow designed to ingest local receipt images, process them using an online Large Language Model (LLM), extract line-by-line spending items into a structured ledger format, and append the categorized results directly into a master Excel/CSV table.
 
